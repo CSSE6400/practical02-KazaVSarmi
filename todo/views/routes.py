@@ -23,11 +23,22 @@ def health():
 
 @api.route('/todos', methods=['GET'])
 def get_todos():
-    todos = Todo.query.all()
-    result = []
-    for todo in todos:
-        result.append(todo.to_dict())
-    return jsonify(result)
+    args = request.args.get("something")
+    if args is None:
+        todos = Todo.query.all()
+        result = []
+        for todo in todos:
+            result.append(todo.to_dict())
+        return jsonify(result)
+    ### check this part
+    # arg_completed = request.args.get("completed")
+    # if arg_completed is not None:
+    #     completed_todos = Todo.query.filter(Todo.completed == arg_completed)
+    #     if completed_todos is None:
+    #         return jsonify({'error': 'No todos completed'}), 404
+    #     return jsonify(completed_todos.to_dict())
+
+    
 
 @api.route('/todos/<int:todo_id>', methods=['GET'])
 def get_todo(todo_id):
@@ -35,6 +46,9 @@ def get_todo(todo_id):
     if todo is None:
         return jsonify({'error': 'Todo not found'}), 404
     return jsonify(todo.to_dict())
+    
+    
+
 
 @api.route('/todos', methods=['POST'])
 def create_todo():
@@ -45,6 +59,14 @@ def create_todo():
     )
     if 'deadline_at' in request.json:
         todo.deadline_at = datetime.fromisoformat(request.json.get('deadline_at'))
+
+    # don't allow columns which are not in schema when creating new entry
+    columns_in_schema = set(todo.to_dict().keys())
+    columns_in_request = set(request.json.keys())
+    undefined_columns = columns_in_request - columns_in_schema
+    if undefined_columns:
+        return jsonify({'error': 'the request has invalid columns'}), 400
+    
     # Adds a new record to the database or will update an existing record
     db.session.add(todo)
     # Commits the changes to the database, this must be called for the changes to be saved
@@ -62,7 +84,13 @@ def update_todo(todo_id):
     if todo_id is not requested_id:
         return jsonify({'error': 'id cannot be changed'}), 400
     
-    
+    # don't allow columns which are not in schema when updating
+    columns_in_schema = set(todo.to_dict().keys())
+    columns_in_request = set(request.json.keys())
+    undefined_columns = columns_in_request - columns_in_schema
+    if undefined_columns:
+        return jsonify({'error': 'the request has invalid columns'}), 400
+
 
     todo.title = request.json.get('title', todo.title)
     todo.description = request.json.get('description', todo.description)
