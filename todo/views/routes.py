@@ -57,6 +57,13 @@ def update_todo(todo_id):
     if todo is None:
         return jsonify({'error': 'Todo not found'}), 404
     
+    # dont allow changes in id (primary key)
+    requested_id = request.json.get('id', todo.id)
+    if todo_id is not requested_id:
+        return jsonify({'error': 'id cannot be changed'}), 400
+    
+    
+
     todo.title = request.json.get('title', todo.title)
     todo.description = request.json.get('description', todo.description)
     todo.completed = request.json.get('completed', todo.completed)
